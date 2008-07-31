@@ -154,7 +154,7 @@ class ResultSender(webapp.RequestHandler):
 
 
 svcErr = StringIO.StringIO()
-resultResult = None
+testResult = None
 
 def getServiceErrorStream():
     global svcErr
