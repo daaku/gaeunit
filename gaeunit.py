@@ -41,7 +41,7 @@ SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 
 __author__ = "George Lei"
 __email__ = "George.Z.Lei@Gmail.com"
-__version__ = "#Revision: 1.1.0 $"[11:-2]
+__version__ = "#Revision: 1.1.1 $"[11:-2]
 
 import sys
 import unittest
@@ -56,17 +56,12 @@ from google.appengine.ext import webapp
 # Web Test Runner
 ##############################################################################
 class _WebTestResult(unittest.TestResult):
-    def __init__(self, stream, descriptions, verbosity):
+    def __init__(self):
         unittest.TestResult.__init__(self)
-        self.stream = stream
-        self.descriptions = descriptions
         self.testNumber = 0
 
     def getDescription(self, test):
-        if self.descriptions:
-            return test.shortDescription() or str(test)
-        else:
-            return str(test)
+        return test.shortDescription() or str(test)
 
     def printErrors(self):
         stream = StringIO.StringIO()
@@ -91,18 +86,9 @@ class _WebTestResult(unittest.TestResult):
         
 
 class WebTestRunner:
-    def __init__(self, stream=sys.stderr, descriptions=1, verbosity=1):
-        self.stream = stream
-        self.descriptions = descriptions
-        self.verbosity = verbosity
-
-    def _makeResult(self):
-        return _WebTestResult(self.stream, self.descriptions, self.verbosity)
-
     def run(self, test):
         "Run the given test case or test suite."
-        global result
-        result = self._makeResult()
+        result = getTestResult(True)
         result.testNumber = len(test._tests)
         startTime = time.time()
         test(result)
@@ -110,49 +96,53 @@ class WebTestRunner:
         timeTaken = stopTime - startTime
         return result
 
-##############################################################
+#############################################################
+# Http request handler
+#############################################################
 
 class GAEUnitTestRunner(webapp.RequestHandler):
     def get(self):
-        global svcErr
-        if svcErr:
-            svcErr.truncate(0)
-        else:
-            svcErr = StringIO.StringIO()
         self.response.out.write(testResultPageContent)
+        srcErr = getServiceErrorStream()
         module = self.request.get("module")
         if not module:
             svcErr.write("Please specify the module name in url<p><strong>Example:</strong><br/>\thttp://localhost:8080/test?module=test_guestbook</p>")
+            return
+        try:
+            __import__(module)
+        except ImportError:
+            svcErr.write("Module '" + module + "' cannot be found.")
+            return
+        self.findTestPackage(module)
+        if not self.testsuite:
+            svcErr.write("No test case is found in the specified module '" + module + "'.")
         else:
-            try:
-                __import__(module)
-            except ImportError:
-                svcErr.write("Module '" + module + "' cannot be found.")
-                return
-            self.findTestPackage(module)
-            if not suite:
-                svcErr.write("No test case is found in the specified module '" + module + "'.")
-            else:
-                runner = WebTestRunner()
-                runner.run(suite)
+            runner = WebTestRunner()
+            runner.run(self.testsuite)
 
     def findTestPackage(self, moduleName):
-        global suite
-        suite = None
+        self.testsuite = None
         try:
             module = sys.modules[moduleName]
         except KeyError:
-            module = None
-        if not module:
             module = __import__(moduleName)
         for testcase in dir(module):
             if testcase.endswith("Test"):
                 t = getattr(module, testcase)
-                addTestCase(t)
+                self.addTestCase(t)
 
+    def addTestCase(self, testcase):
+        if issubclass(testcase, unittest.TestCase):
+            s = unittest.makeSuite(testcase)
+            if self.testsuite:
+                self.testsuite.addTests(s)
+            else:
+                self.testsuite = s
+                
 class ResultSender(webapp.RequestHandler):
     def get(self):
         cache = StringIO.StringIO()
+        result = getTestResult()
         if svcErr.getvalue() != "":
             cache.write('{"svcerr":%d, "svcinfo":"%s",' % (1, svcErr.getvalue()))
         else:
@@ -162,22 +152,29 @@ class ResultSender(webapp.RequestHandler):
         cache.write('}')
         self.response.out.write(cache.getvalue())
 
-suite = None
+
 svcErr = StringIO.StringIO()
+resultResult = None
 
-def setTestSuite(testsuite):
-    if isinstance(testsuite, unittest.TestSuite):
-        global suite
-        suite = testsuite
+def getServiceErrorStream():
+    global svcErr
+    if svcErr:
+        svcErr.truncate(0)
+    else:
+        svcErr = StringIO.StringIO()
 
-def addTestCase(testcase):
-    if issubclass(testcase, unittest.TestCase):
-        s = unittest.makeSuite(testcase)
-        global suite
-        if suite:
-            suite.addTests(s)
-        else:
-            suite = s
+def getTestResult(createNewObject=False):
+    global testResult
+    if createNewObject or not testResult:
+        testResult = _WebTestResult()
+    return testResult
+
+
+
+
+################################################
+# Browser codes
+################################################
 
 testResultPageContent = """
 <html>
@@ -265,7 +262,7 @@ testResultPageContent = """
 <body>
     <div id="headerarea">
         <div id="title">GAEUnit: Google App Engine Unit Test Framework</div>
-        <div id="version">version 1.1.0</div>
+        <div id="version">version 1.1.1</div>
         <div id="weblink">Please check <a href="http://code.google.com/p/gaeunit">http://code.google.com/p/gaeunit</a> for the latest version</div>
     </div>
     <div id="resultarea">
@@ -279,7 +276,10 @@ testResultPageContent = """
         </tbody></table>
     </div>
     <div id="errorarea">The test is running, please wait...</div>
-    <div id="footerarea">Copyright 2008 George Lei</div>
+    <div id="footerarea">
+        Please write to the <a href="mailto:George.Z.Lei@Gmail.com">author</a> to report problems<br/>
+        Copyright 2008 George Lei
+    </div>
 </body></html>
 """
 
