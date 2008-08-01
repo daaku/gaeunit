@@ -142,10 +142,10 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         self._findTestPackage(module)
         if not self.testsuite:
             if module:
-                svcErr.write("Module '%s' does not contain any test cases " %
+                svcErr.write("Module '%s' does not contain any test case " %
                          module)
             else:
-                svcErr.write("No test case is found in 'test' package")
+                svcErr.write("No test case is found in 'test' folder")
         else:
             if format == "html":
                 runner = WebTestRunner()
@@ -188,6 +188,7 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         if moduleName:
             testModules.append(moduleName)
         else:
+            isPackage = ("__init__.py" in os.listdir("test"))
             for file in os.listdir("test"):
                 if file.startswith("test_") and file.endswith(".py"):
                     testModules.append(file[:-3])
@@ -195,7 +196,10 @@ class GAEUnitTestRunner(webapp.RequestHandler):
             try:
                 module = sys.modules[testModuleName]
             except KeyError:
-                module = __import__(testModuleName)
+                if isPackage:
+                    module = __import__("test."+testModuleName, globals(), locals(), [testModuleName], -1)
+                else:
+                    module = __import__(testModuleName)
             for testcase in dir(module):
                 if testcase.endswith("Test"):
                     t = getattr(module, testcase)
