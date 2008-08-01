@@ -152,7 +152,26 @@ class GAEUnitTestRunner(webapp.RequestHandler):
                                         "GAEUnit Test Results\n" \
                                         "====================\n\n")
                 runner = unittest.TextTestRunner(self.response.out)
-            runner.run(self.testsuite)
+            self._runTestSuite(runner)
+                
+    def _runTestSuite(self, runner):
+        """Run the test suite.
+
+        Preserve the current development apiproxy, create a new apiproxy and
+        temporary datastore that will be used for this test suite, run the
+        test suite, and restore the development apiproxy.  This isolates the
+        test and development datastores from each other.
+
+        """        
+        original_apiproxy = apiproxy_stub_map.apiproxy
+        try:
+           apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap() 
+           temp_stub = datastore_file_stub.DatastoreFileStub(
+               'GAEUnitDataStore', None, None)  
+           apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', temp_stub)
+           runner.run(self.testsuite)
+        finally:
+           apiproxy_stub_map.apiproxy = original_apiproxy
 
     def _findTestPackage(self, moduleName):
         self.testsuite = None
