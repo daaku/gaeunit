@@ -61,6 +61,7 @@ __license__ = "BSD"
 __url__ = "http://code.google.com/p/gaeunit"
 
 import sys
+import os
 import unittest
 import StringIO
 import time
@@ -122,6 +123,9 @@ class WebTestRunner:
 
 class GAEUnitTestRunner(webapp.RequestHandler):
     def get(self):
+        # Add './test' into the search scope
+        if not "test" in sys.path:
+            sys.path.insert(0, "test")
         srcErr = getServiceErrorStream()
         format = self.request.get("format")
         if not format or format not in ["html", "plain"]:
@@ -129,20 +133,19 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         if format != "plain":
             self.response.out.write(testResultPageContent)
         module = self.request.get("module")
-        if not module:
-            svcErr.write("Please specify the module name in url" \
-                         "<p><strong>Example:</strong><br/>" \
-                         "http://localhost:8080/test?module=test_module</p>")
-            return
-        try:
-            __import__(module)
-        except ImportError:
-            svcErr.write("Module '%s' cannot be found." % module)
-            return
+        if module:
+            try:
+                __import__(module)
+            except ImportError:
+                svcErr.write("Module '%s' cannot be found." % module)
+                return
         self._findTestPackage(module)
         if not self.testsuite:
-            svcErr.write("Module '%s' does not contain any test cases " %
+            if module:
+                svcErr.write("Module '%s' does not contain any test cases " %
                          module)
+            else:
+                svcErr.write("No test case is found in 'test' package")
         else:
             if format == "html":
                 runner = WebTestRunner()
@@ -174,15 +177,29 @@ class GAEUnitTestRunner(webapp.RequestHandler):
            apiproxy_stub_map.apiproxy = original_apiproxy
 
     def _findTestPackage(self, moduleName):
+        """Search the test cases.
+        If the parameter 'moduleName' is specified, only test cases in this 
+        module is search. Otherwise, all modules starting with 'test_' in 
+        './test' folder will be searched.
+        """
+        # Clean the test suite data that is used by last round of test
         self.testsuite = None
-        try:
-            module = sys.modules[moduleName]
-        except KeyError:
-            module = __import__(moduleName)
-        for testcase in dir(module):
-            if testcase.endswith("Test"):
-                t = getattr(module, testcase)
-                self._addTestCase(t)
+        testModules = []
+        if moduleName:
+            testModules.append(moduleName)
+        else:
+            for file in os.listdir("test"):
+                if file.startswith("test_") and file.endswith(".py"):
+                    testModules.append(file[:-3])
+        for testModuleName in testModules:
+            try:
+                module = sys.modules[testModuleName]
+            except KeyError:
+                module = __import__(testModuleName)
+            for testcase in dir(module):
+                if testcase.endswith("Test"):
+                    t = getattr(module, testcase)
+                    self._addTestCase(t)
 
     def _addTestCase(self, testcase):
         if issubclass(testcase, unittest.TestCase):
@@ -242,7 +259,7 @@ testResultPageContent = """
         #version {font-size:87%; text-align:center;}
         #weblink {font-style:italic; text-align:center; padding-top:7px; padding-bottom:20px}
         #results {margin:0pt auto; text-align:center; font-weight:bold}
-        #testindicator {width:950px; height:16px; background-color:green;}
+        #testindicator {width:950px; height:16px; border-style:solid; border-width:2px 1px 1px 2px; background-color:#f8f8f8;}
         #footerarea {text-align:center; font-size:83%; padding-top:25px}
         #errorarea {padding-top:25px}
         .error {border-color: #c3d9ff; border-style: solid; border-width: 2px 1px 2px 1px; width:945px; padding:1px; margin:0pt auto; text-align:left}
@@ -300,13 +317,19 @@ testResultPageContent = """
         function testFailed() {
             document.getElementById("testindicator").style.backgroundColor="red";
         }
+        
+        function testSucceed() {
+            document.getElementById("testindicator").style.backgroundColor="green";
+        }
 
         function setResult(runs, total, errors, failures) {
             document.getElementById("testran").innerHTML = runs;
             document.getElementById("testtotal").innerHTML = total;
             document.getElementById("testerror").innerHTML = errors;
             document.getElementById("testfailure").innerHTML = failures;
-            if (errors || failures) {
+            if (errors==0 && failures==0) {
+                testSucceed();
+            } else {
                 testFailed();
             }
         }
