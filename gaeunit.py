@@ -22,7 +22,7 @@ Please replace 'test_guestbook' with your own module that contains the test case
 4. Wait and see the result.
 
 
-Copyright (c) 2008 George Lei
+Copyright (c) 2008 George Lei and Steven R. Farley
 This module is free software, and you may redistribute it and/or modify
 it under the same terms as Python itself, so long as this copyright message
 and disclaimer are retained in their original form.
@@ -39,7 +39,7 @@ AND THERE IS NO OBLIGATION WHATSOEVER TO PROVIDE MAINTENANCE,
 SUPPORT, UPDATES, ENHANCEMENTS, OR MODIFICATIONS.
 '''
 
-__author__ = "George Lei"
+__author__ = "George Lei and Steven R. Farley"
 __email__ = "George.Z.Lei@Gmail.com"
 __version__ = "#Revision: 1.1.1 $"[11:-2]
 
@@ -76,7 +76,8 @@ class _WebTestResult(unittest.TestResult):
         stream.write('"%s":[' % flavour)
         for test, err in errors:
             stream.write('{"desc":"%s", "detail":"%s"},' % (self.getDescription(test), self.escape(err)))
-        stream.seek(-1, 2)
+        if len(errors):
+            stream.seek(-1, 2)
         stream.write("]")
 
     def escape(self, s):
