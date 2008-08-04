@@ -171,12 +171,12 @@ class GAEUnitTestRunner(webapp.RequestHandler):
             suite = self._searchModule(module)
         else:
             suite = self._searchPackage("test")
-        if not suite:
+        if not suite: # TODO: This error will be reported even module not found
             if module:
-                svcErr.write("Module '%s' does not contain any test case " %
+                logError("Module '%s' does not contain any test case " %
                          module)
             else:
-                svcErr.write("No test case is found in 'test' folder")
+                logError("No test case is found in 'test' folder")
         else:
             if format == "html":
                 runner = WebTestRunner()
@@ -215,11 +215,19 @@ class GAEUnitTestRunner(webapp.RequestHandler):
 
         'package' can be long form like 'google.appengine.ext.test'
         """
+        try:
+            p = __import__(package)
+            if p and ("makeTestSuite" in dir(p)):
+                makeTestSuite = getattr(p, "makeTestSuite")
+                return makeTestSuite.__call__()
+        except ImportError:
+                logError("Package '%s' cannot be imported." % package)
         suite = unittest.TestSuite()
         dirName = self._convertToPath(package)
         for file in os.listdir(dirName):
             if file.startswith("test_") and file.endswith(".py"):
                 moduleName = file[:-3]
+                moduleName = package + "." + moduleName
                 s = self._searchModule(moduleName)
                 suite.addTests(s)
         return suite
@@ -256,7 +264,7 @@ class GAEUnitTestRunner(webapp.RequestHandler):
                     else:
                         module = __import__(testModuleName)
             except ImportError:
-                svcErr.write("Module '%s' cannot be found." % moduleName)
+                logError("Module '%s' cannot be found." % moduleName)
                 return
             # Create the test suite
             suite = unittest.TestSuite()
@@ -299,6 +307,9 @@ def getServiceErrorStream():
     else:
         svcErr = StringIO.StringIO()
 
+def logError(s):
+    svcErr.write(s)
+    
 def getTestResult(createNewObject=False):
     global testResult
     if createNewObject or not testResult:
