@@ -122,7 +122,38 @@ class WebTestRunner:
 #############################################################
 
 class GAEUnitTestRunner(webapp.RequestHandler):
+    def __init__(self):
+        self.package = "test"
+        
     def get(self):
+        """Major Request Handler
+        The request URL should be in the following formats
+        
+        http://localhost:8080/test?package=test_package
+        http://localhost:8080/test?module=test_module
+        
+        parameter 'package' and 'module' cannot be used at the same time.
+        
+        When 'package' is set, GAEUnit will search for the global function
+        'makeTestSuite' in __init__.py. If this function is not found, 
+        all test case classes similar to 'XxxTest' in modules similar to 
+        'test_xxx" will be collected and executed.
+        
+        When 'module' is set and 'package' is not set, GAEUnit will search
+        in the root directory or 'test' directory for the specified module.
+        The module can also be in the long form that contains package 
+        information. For example,
+        
+        http://localhost:8080/test?module=test_package.test_module
+        
+        The request URL can be in this format
+        
+        http://localhost:8080/test
+        
+        It is equivalent to 
+        
+        http://localhost:8080/test?package=test 
+        """
         # Add './test' into the search scope
         if not "test" in sys.path:
             sys.path.insert(0, "test")
@@ -132,15 +163,15 @@ class GAEUnitTestRunner(webapp.RequestHandler):
             format = "html"
         if format != "plain":
             self.response.out.write(testResultPageContent)
+        package = self.request.get("package")
         module = self.request.get("module")
-        if module:
-            try:
-                __import__(module)
-            except ImportError:
-                svcErr.write("Module '%s' cannot be found." % module)
-                return
-        self._findTestPackage(module)
-        if not self.testsuite:
+        if package:
+            suite = self._searchPackage(package)
+        elif module:
+            suite = self._searchModule(module)
+        else:
+            suite = self._searchPackage("test")
+        if not suite:
             if module:
                 svcErr.write("Module '%s' does not contain any test case " %
                          module)
@@ -155,9 +186,9 @@ class GAEUnitTestRunner(webapp.RequestHandler):
                                         "GAEUnit Test Results\n" \
                                         "====================\n\n")
                 runner = unittest.TextTestRunner(self.response.out)
-            self._runTestSuite(runner)
-                
-    def _runTestSuite(self, runner):
+            self._runTestSuite(runner, suite)
+
+    def _runTestSuite(self, runner, suite):
         """Run the test suite.
 
         Preserve the current development apiproxy, create a new apiproxy and
@@ -172,46 +203,73 @@ class GAEUnitTestRunner(webapp.RequestHandler):
            temp_stub = datastore_file_stub.DatastoreFileStub(
                'GAEUnitDataStore', None, None)  
            apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', temp_stub)
-           runner.run(self.testsuite)
+           runner.run(suite)
         finally:
            apiproxy_stub_map.apiproxy = original_apiproxy
 
-    def _findTestPackage(self, moduleName):
-        """Search the test cases.
-        If the parameter 'moduleName' is specified, only test cases in this 
-        module is search. Otherwise, all modules starting with 'test_' in 
-        './test' folder will be searched.
+    def _searchPackage(self, package):
         """
+        Searching rules:
+        Naming convention: all test module in the target module must start with
+        'test_', for example 'test_appengin', 'test_db', etc.
+
+        'package' can be long form like 'google.appengine.ext.test'
+        """
+        suite = unittest.TestSuite()
+        dirName = self._convertToPath(package)
+        for file in os.listdir(dirName):
+            if file.startswith("test_") and file.endswith(".py"):
+                moduleName = file[:-3]
+                s = self._searchModule(moduleName)
+                suite.addTests(s)
+        return suite
+    
+    def _convertToPath(self, package):
+        """ Convert package name like 'google.appengine.ext' to directory name 
+        like 'google/appengine/ext'
+        """
+        return re.sub("\.", "/", package)
+    
+    def _searchModule(self, moduleName):
+        """Search the test cases.
+        
+        If the parameter 'moduleName' is specified, only test cases in this 
+        module is search. 
+        
+        'module' can be either simple name or long name including package name.
+        """
+        # Test if given module can be valid
         # Clean the test suite data that is used by last round of test
-        self.testsuite = None
         testModules = []
-        if moduleName:
-            testModules.append(moduleName)
-        else:
-            isPackage = ("__init__.py" in os.listdir("test"))
-            for file in os.listdir("test"):
-                if file.startswith("test_") and file.endswith(".py"):
-                    testModules.append(file[:-3])
+        testModules.append(moduleName)
+        isPackage = ("__init__.py" in os.listdir("test"))
+        # core
         for testModuleName in testModules:
+            # Load the module
             try:
-                module = sys.modules[testModuleName]
-            except KeyError:
-                if isPackage:
-                    module = __import__("test."+testModuleName, globals(), locals(), [testModuleName], -1)
-                else:
-                    module = __import__(testModuleName)
+                __import__(moduleName)
+                try:
+                    module = sys.modules[testModuleName]
+                except KeyError:
+                    if isPackage:
+                        module = __import__("test."+testModuleName, globals(), locals(), [testModuleName], -1)
+                    else:
+                        module = __import__(testModuleName)
+            except ImportError:
+                svcErr.write("Module '%s' cannot be found." % moduleName)
+                return
+            # Create the test suite
+            suite = unittest.TestSuite()
             for testcase in dir(module):
                 if testcase.endswith("Test"):
                     t = getattr(module, testcase)
-                    self._addTestCase(t)
+                    self._addTestCase(suite, t)
+        return suite
 
-    def _addTestCase(self, testcase):
+    def _addTestCase(self, suite, testcase):
         if issubclass(testcase, unittest.TestCase):
             s = unittest.makeSuite(testcase)
-            if self.testsuite:
-                self.testsuite.addTests(s)
-            else:
-                self.testsuite = s
+            suite.addTests(s)
                 
 class ResultSender(webapp.RequestHandler):
     def get(self):
