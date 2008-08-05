@@ -72,6 +72,8 @@ from google.appengine.ext import webapp
 from google.appengine.api import apiproxy_stub_map  
 from google.appengine.api import datastore_file_stub
 
+_DEFAULT_TEST_DIR = 'test'
+
 ##############################################################################
 # Web Test Runner
 ##############################################################################
@@ -175,11 +177,21 @@ class GAEUnitTestRunner(webapp.RequestHandler):
 
         package_name = self.request.get("package")
         test_name = self.request.get("name")
-        if not package_name and not test_name:
-            package_name = 'test'
+        
         loader = unittest.defaultTestLoader
         suite = unittest.TestSuite()
-        if test_name:
+
+        # As a special case for running tests under the 'test' directory without
+        # needing an "__init__.py" file:
+        if not _DEFAULT_TEST_DIR in sys.path:
+            sys.path.append(_DEFAULT_TEST_DIR)
+
+        if not package_name and not test_name:
+            module_names = [mf[0:-3] for mf in os.listdir(_DEFAULT_TEST_DIR) if mf.endswith(".py")]
+            logging.info(module_names)
+            for module_name in module_names:
+                suite.addTest(loader.loadTestsFromName(module_name))
+        elif test_name:
             try:
                 suite.addTest(loader.loadTestsFromName(test_name))
             except:
