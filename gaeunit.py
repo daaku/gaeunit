@@ -14,7 +14,7 @@ Usage:
 
 3. Launch the development web server.  Point your browser to:
 
-     http://localhost:8080/test?module=my_test_module
+     http://localhost:8080/test?name=my_test_module
 
    Replace 'my_test_module' with the module that contains your test cases,
    and modify the port if necessary.
