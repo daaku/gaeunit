@@ -75,9 +75,11 @@ package: Running all tests in package
 
   Note: Request http://localhost:8080/test equals to http://localhost:8080/test?package=test
 
-name: Running all tests in module
+name: Running test object. Test object can be module, class, or method.
 
-  Example: http://localhost:8080/test?name=test_module
+  Example 1: http://localhost:8080/test?name=test_module
+  Example 2: http://localhost:8080/test?name=test_module.ClassTest
+  Example 3: http://localhost:8080/test?name=test_module.ClassTest.testMethod
 
 format: The type of displayed test result. The value can be 'html' for HTML format or 'plain' for plain text format.
 
