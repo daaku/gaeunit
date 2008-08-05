@@ -66,6 +66,7 @@ import unittest
 import StringIO
 import time
 import re
+import logging
 import wsgiref.handlers
 from google.appengine.ext import webapp
 from google.appengine.api import apiproxy_stub_map  
@@ -126,58 +127,73 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         self.package = "test"
         
     def get(self):
-        """Major Request Handler
-        The request URL should be in the following formats
+        """Execute a test suite in response to an HTTP GET request.
+
+        The request URL supports the following formats:
         
-        http://localhost:8080/test?package=test_package
-        http://localhost:8080/test?module=test_module
+          http://localhost:8080/test?package=test_package
+          http://localhost:8080/test?name=test
         
-        parameter 'package' and 'module' cannot be used at the same time.
+        Parameters 'package' and 'name' should not be used together.  If both
+        are specified, 'name' is selected and 'package' is ignored.
         
-        When 'package' is set, GAEUnit will search for the global function
-        'makeTestSuite' in __init__.py. If this function is not found, 
-        all test case classes similar to 'XxxTest' in modules similar to 
-        'test_xxx" will be collected and executed.
+        When 'package' is set, GAEUnit will run all TestCase classes from
+        all modules in the package.
         
-        When 'module' is set and 'package' is not set, GAEUnit will search
-        in the root directory or 'test' directory for the specified module.
-        The module can also be in the long form that contains package 
-        information. For example,
+        When 'name' is set, GAEUnit will assume it is either a module (possibly
+        preceded by its package); a module and test class; or a module,
+        test class, and test method.  For example,
         
-        http://localhost:8080/test?module=test_package.test_module
+          http://localhost:8080/test?name=test_package.test_module.TestClass.test_method
         
-        The request URL can be in this format
+        runs only test_method() whereas,
         
-        http://localhost:8080/test
+          http://localhost:8080/test?name=test_package.test_module.TestClass
         
-        It is equivalent to 
+        runs all test methods in TestClass, and
         
-        http://localhost:8080/test?package=test 
+          http://localhost:8080/test?name=test_package.test_module
+         
+        runs all test methods in all test classes in test_module.
+        
+        If the default URL is requested:
+        
+          http://localhost:8080/test
+        
+        it is equivalent to 
+        
+          http://localhost:8080/test?package=test 
+
         """
-        # Add './test' into the search scope
-        if not "test" in sys.path:
-            sys.path.insert(0, "test")
         srcErr = getServiceErrorStream()
+
         format = self.request.get("format")
         if not format or format not in ["html", "plain"]:
             format = "html"
         if format != "plain":
             self.response.out.write(testResultPageContent)
-        package = self.request.get("package")
-        module = self.request.get("module")
-        if package:
-            suite = self._searchPackage(package)
-        elif module:
-            suite = self._searchModule(module)
-        else:
-            suite = self._searchPackage("test")
-        if not suite: # TODO: This error will be reported even module not found
-            if module:
-                logError("Module '%s' does not contain any test case " %
-                         module)
-            else:
-                logError("No test case is found in 'test' folder")
-        else:
+
+        package_name = self.request.get("package")
+        test_name = self.request.get("name")
+        if not package_name and not test_name:
+            package_name = 'test'
+        loader = unittest.defaultTestLoader
+        suite = unittest.TestSuite()
+        if test_name:
+            try:
+                suite.addTest(loader.loadTestsFromName(test_name))
+            except:
+                pass
+        elif package_name:
+            try:
+                package = __import__(package_name)
+                module_names = package.__all__
+                for module_name in module_names:
+                    suite.addTest(loader.loadTestsFromName('%s.%s' % (package_name, module_name)))
+            except:
+                pass
+
+        if suite.countTestCases() > 0:
             if format == "html":
                 runner = WebTestRunner()
             else:
@@ -187,6 +203,10 @@ class GAEUnitTestRunner(webapp.RequestHandler):
                                         "====================\n\n")
                 runner = unittest.TextTestRunner(self.response.out)
             self._runTestSuite(runner, suite)
+        else:
+            _logError("'%s' is not found or does not contain any tests." % \
+                      (test_name or package_name))
+
 
     def _runTestSuite(self, runner, suite):
         """Run the test suite.
@@ -207,77 +227,6 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         finally:
            apiproxy_stub_map.apiproxy = original_apiproxy
 
-    def _searchPackage(self, package):
-        """
-        Searching rules:
-        Naming convention: all test module in the target module must start with
-        'test_', for example 'test_appengin', 'test_db', etc.
-
-        'package' can be long form like 'google.appengine.ext.test'
-        """
-        try:
-            p = __import__(package)
-            if p and ("makeTestSuite" in dir(p)):
-                makeTestSuite = getattr(p, "makeTestSuite")
-                return makeTestSuite.__call__()
-        except ImportError:
-                logError("Package '%s' cannot be imported." % package)
-        suite = unittest.TestSuite()
-        dirName = self._convertToPath(package)
-        for file in os.listdir(dirName):
-            if file.startswith("test_") and file.endswith(".py"):
-                moduleName = file[:-3]
-                moduleName = package + "." + moduleName
-                s = self._searchModule(moduleName)
-                suite.addTests(s)
-        return suite
-    
-    def _convertToPath(self, package):
-        """ Convert package name like 'google.appengine.ext' to directory name 
-        like 'google/appengine/ext'
-        """
-        return re.sub("\.", "/", package)
-    
-    def _searchModule(self, moduleName):
-        """Search the test cases.
-        
-        If the parameter 'moduleName' is specified, only test cases in this 
-        module is search. 
-        
-        'module' can be either simple name or long name including package name.
-        """
-        # Test if given module can be valid
-        # Clean the test suite data that is used by last round of test
-        testModules = []
-        testModules.append(moduleName)
-        isPackage = ("__init__.py" in os.listdir("test"))
-        # core
-        for testModuleName in testModules:
-            # Load the module
-            try:
-                __import__(moduleName)
-                try:
-                    module = sys.modules[testModuleName]
-                except KeyError:
-                    if isPackage:
-                        module = __import__("test."+testModuleName, globals(), locals(), [testModuleName], -1)
-                    else:
-                        module = __import__(testModuleName)
-            except ImportError:
-                logError("Module '%s' cannot be found." % moduleName)
-                return
-            # Create the test suite
-            suite = unittest.TestSuite()
-            for testcase in dir(module):
-                if testcase.endswith("Test"):
-                    t = getattr(module, testcase)
-                    self._addTestCase(suite, t)
-        return suite
-
-    def _addTestCase(self, suite, testcase):
-        if issubclass(testcase, unittest.TestCase):
-            s = unittest.makeSuite(testcase)
-            suite.addTests(s)
                 
 class ResultSender(webapp.RequestHandler):
     def get(self):
@@ -307,7 +256,13 @@ def getServiceErrorStream():
     else:
         svcErr = StringIO.StringIO()
 
-def logError(s):
+def _logError(s):
+    # TODO: When using 'plain' format, the error is not returned to
+    #       the HTTP client.  To fix this, svcErr must have been previously set
+    #       to self.response.out for the plain format.  Also, a non-200 error
+    #       code would help 'curl' and other automated clients to determine
+    #       the success/fail status of the test suite.
+    logging.warn(s)
     svcErr.write(s)
     
 def getTestResult(createNewObject=False):
@@ -315,7 +270,6 @@ def getTestResult(createNewObject=False):
     if createNewObject or not testResult:
         testResult = _WebTestResult()
     return testResult
-
 
 
 
