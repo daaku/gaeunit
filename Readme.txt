@@ -74,6 +74,7 @@ package: Running all tests in package
   Example: http://localhost:8080/test?package=test_package
 
   Note: Request http://localhost:8080/test equals to http://localhost:8080/test?package=test
+        'package' option will be merged into 'name' option in the following releases
 
 name: Running test object. Test object can be module, class, or method.
 
