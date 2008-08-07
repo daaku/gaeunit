@@ -55,7 +55,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "George Lei and Steven R. Farley"
 __email__ = "George.Z.Lei@Gmail.com"
-__version__ = "#Revision: 1.1.1 $"[11:-2]
+__version__ = "#Revision: 1.2.1 $"[11:-2]
 __copyright__= "Copyright (c) 2008, George Lei and Steven R. Farley"
 __license__ = "BSD"
 __url__ = "http://code.google.com/p/gaeunit"
@@ -113,7 +113,7 @@ class WebTestRunner:
     def run(self, test):
         "Run the given test case or test suite."
         result = getTestResult(True)
-        result.testNumber = len(test._tests)
+        result.testNumber = test.countTestCases()
         startTime = time.time()
         test(result)
         stopTime = time.time()
@@ -167,17 +167,20 @@ class GAEUnitTestRunner(webapp.RequestHandler):
           http://localhost:8080/test?package=test 
 
         """
-        srcErr = getServiceErrorStream()
+        svcErr = getServiceErrorStream()
 
         format = self.request.get("format")
         if not format or format not in ["html", "plain"]:
             format = "html"
-        if format != "plain":
-            self.response.out.write(testResultPageContent)
 
+        unknownArgs = [arg for arg in self.request.arguments() if arg not in ("package", "name", "format")]
+        if len(unknownArgs) > 0:
+            for arg in unknownArgs:
+                _logError("The parameter '%s' is unrecognizable, please check it out." % arg)
+        
         package_name = self.request.get("package")
         test_name = self.request.get("name")
-        
+
         loader = unittest.defaultTestLoader
         suite = unittest.TestSuite()
 
@@ -204,17 +207,23 @@ class GAEUnitTestRunner(webapp.RequestHandler):
                     suite.addTest(loader.loadTestsFromName('%s.%s' % (package_name, module_name)))
             except:
                 pass
-
+        
         if suite.countTestCases() > 0:
+            runner = None
             if format == "html":
                 runner = WebTestRunner()
+                self.response.out.write(testResultPageContent)
             else:
                 self.response.headers["Content-Type"] = "text/plain"
-                self.response.out.write("====================\n" \
-                                        "GAEUnit Test Results\n" \
-                                        "====================\n\n")
-                runner = unittest.TextTestRunner(self.response.out)
-            self._runTestSuite(runner, suite)
+                if svcErr.getvalue() != "":
+                    self.response.out.write(svcErr.getvalue())
+                else:
+                    self.response.out.write("====================\n" \
+                                            "GAEUnit Test Results\n" \
+                                            "====================\n\n")
+                    runner = unittest.TextTestRunner(self.response.out)
+            if runner:
+                self._runTestSuite(runner, suite)
         else:
             _logError("'%s' is not found or does not contain any tests." % \
                       (test_name or package_name))
@@ -267,6 +276,7 @@ def getServiceErrorStream():
         svcErr.truncate(0)
     else:
         svcErr = StringIO.StringIO()
+    return svcErr
 
 def _logError(s):
     # TODO: When using 'plain' format, the error is not returned to
@@ -374,14 +384,14 @@ testResultPageContent = """
         }
 
         // Update page every 5 seconds
-        setInterval(callServer, 5000);
+        setInterval(callServer, 3000);
     </script>
     <title>GAEUnit: Google App Engine Unit Test Framework</title>
 </head>
 <body>
     <div id="headerarea">
         <div id="title">GAEUnit: Google App Engine Unit Test Framework</div>
-        <div id="version">version 1.1.1</div>
+        <div id="version">version 1.2.1</div>
         <div id="weblink">Please check <a href="http://code.google.com/p/gaeunit">http://code.google.com/p/gaeunit</a> for the latest version</div>
     </div>
     <div id="resultarea">
