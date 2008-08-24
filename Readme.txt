@@ -12,6 +12,12 @@ GAEUnit is a unit test framework that helps to automate testing of your Google A
 GAEUnit is simple. It contains only one file, gaeunit.py. Just copy that file into your application directory, add the test URL to app.yaml, you can start testing your apps for Google App Engine. 
 
 
+WHAT'S NEW
+
+1.2.2
+  - The action of checking test result is stopped after the test is finished.
+
+
 INSTALLATION
 
   1) Copy gaeunit.py into your web app root directory (the directory containing app.yaml).  
