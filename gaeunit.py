@@ -55,7 +55,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "George Lei and Steven R. Farley"
 __email__ = "George.Z.Lei@Gmail.com"
-__version__ = "#Revision: 1.2.1 $"[11:-2]
+__version__ = "#Revision: 1.2.2 $"[11:-2]
 __copyright__= "Copyright (c) 2008, George Lei and Steven R. Farley"
 __license__ = "BSD"
 __url__ = "http://code.google.com/p/gaeunit"
@@ -393,7 +393,7 @@ testResultPageContent = """
 <body>
     <div id="headerarea">
         <div id="title">GAEUnit: Google App Engine Unit Test Framework</div>
-        <div id="version">version 1.2.1</div>
+        <div id="version">version 1.2.2</div>
         <div id="weblink">Please check <a href="http://code.google.com/p/gaeunit">http://code.google.com/p/gaeunit</a> for the latest version</div>
     </div>
     <div id="resultarea">
