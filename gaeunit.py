@@ -365,10 +365,12 @@ testResultPageContent = """
 
         function testFailed() {
             document.getElementById("testindicator").style.backgroundColor="red";
+            clearInterval(timer);
         }
         
         function testSucceed() {
             document.getElementById("testindicator").style.backgroundColor="green";
+            clearInterval(timer);
         }
 
         function setResult(runs, total, errors, failures) {
@@ -384,7 +386,7 @@ testResultPageContent = """
         }
 
         // Update page every 5 seconds
-        setInterval(callServer, 3000);
+        var timer = setInterval(callServer, 3000);
     </script>
     <title>GAEUnit: Google App Engine Unit Test Framework</title>
 </head>
