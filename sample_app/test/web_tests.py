@@ -8,9 +8,6 @@ class IndexTest(unittest.TestCase):
   def setUp(self):
     self.application = webapp.WSGIApplication([('/', index.IndexHandler)], debug=True)
 
-  def tearDown(self):
-    pass
-
   def test_default_page(self):
       app = TestApp(self.application)
       response = app.get('/')
