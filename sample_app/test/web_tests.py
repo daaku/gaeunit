@@ -6,7 +6,7 @@ import index
 class IndexTest(unittest.TestCase):
 
   def setUp(self):
-    self.application = webapp.WSGIApplication([('/', index.IndexHandler)], debug=True)
+      self.application = webapp.WSGIApplication([('/', index.IndexHandler)], debug=True)
 
   def test_default_page(self):
       app = TestApp(self.application)
