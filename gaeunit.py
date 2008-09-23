@@ -191,17 +191,18 @@ class GAEUnitTestRunner(webapp.RequestHandler):
 
         if not package_name and not test_name:
             module_names = [mf[0:-3] for mf in os.listdir(_DEFAULT_TEST_DIR) if mf.endswith(".py")]
-            logging.info(module_names)
             for module_name in module_names:
-                suite.addTest(loader.loadTestsFromName(module_name))
+                module = reload(__import__(module_name))
+                suite.addTest(loader.loadTestsFromModule(module))
         elif test_name:
             try:
-                suite.addTest(loader.loadTestsFromName(test_name))
+                module = reload(__import__(test_name))
+                suite.addTest(loader.loadTestsFromModule(module))
             except:
                 pass
         elif package_name:
             try:
-                package = __import__(package_name)
+                package = reload(__import__(package_name))
                 module_names = package.__all__
                 for module_name in module_names:
                     suite.addTest(loader.loadTestsFromName('%s.%s' % (package_name, module_name)))
