@@ -234,9 +234,9 @@ class GAEUnitTestRunner(webapp.RequestHandler):
         """Run the test suite.
 
         Preserve the current development apiproxy, create a new apiproxy and
-        temporary datastore that will be used for this test suite, run the
-        test suite, and restore the development apiproxy.  This isolates the
-        test and development datastores from each other.
+        replace the datastore with a temporary one that will be used for this
+        test suite, run the test suite, and restore the development apiproxy.
+        This isolates the test datastores from the development datastore.
 
         """        
         original_apiproxy = apiproxy_stub_map.apiproxy
@@ -244,7 +244,10 @@ class GAEUnitTestRunner(webapp.RequestHandler):
            apiproxy_stub_map.apiproxy = apiproxy_stub_map.APIProxyStubMap() 
            temp_stub = datastore_file_stub.DatastoreFileStub(
                'GAEUnitDataStore', None, None)  
-           apiproxy_stub_map.apiproxy.RegisterStub('datastore_v3', temp_stub)
+           apiproxy_stub_map.apiproxy.RegisterStub('datastore', temp_stub)
+           # Preserve the other services.
+           for name in ['user', 'urlfetch', 'mail', 'memcache', 'images']: 
+               apiproxy_stub_map.apiproxy.RegisterStub(name, original_apiproxy.GetStub(name))
            runner.run(suite)
         finally:
            apiproxy_stub_map.apiproxy = original_apiproxy
