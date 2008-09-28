@@ -310,12 +310,12 @@ testResultPageContent = """
         body {font-family:arial,sans-serif; text-align:center}
         #title {font-family:"Times New Roman","Times Roman",TimesNR,times,serif; font-size:28px; font-weight:bold; text-align:center}
         #version {font-size:87%; text-align:center;}
-        #weblink {font-style:italic; text-align:center; padding-top:7px; padding-bottom:20px}
-        #results {margin:0pt auto; text-align:center; font-weight:bold}
-        #testindicator {width:950px; height:16px; border-style:solid; border-width:2px 1px 1px 2px; background-color:#f8f8f8;}
+        #weblink {font-style:italic; text-align:center; padding-top:7px; padding-bottom:7px}
+        #results {padding-top:20px; margin:0pt auto; text-align:center; font-weight:bold}
+        #testindicator {width:750px; height:16px; border-style:solid; border-width:2px 1px 1px 2px; background-color:#f8f8f8;}
         #footerarea {text-align:center; font-size:83%; padding-top:25px}
         #errorarea {padding-top:25px}
-        .error {border-color: #c3d9ff; border-style: solid; border-width: 2px 1px 2px 1px; width:945px; padding:1px; margin:0pt auto; text-align:left}
+        .error {border-color: #c3d9ff; border-style: solid; border-width: 2px 1px 2px 1px; width:750px; padding:1px; margin:0pt auto; text-align:left}
         .errtitle {background-color:#c3d9ff; font-weight:bold}
     </style>
     <script language="javascript" type="text/javascript">
@@ -397,8 +397,7 @@ testResultPageContent = """
 <body>
     <div id="headerarea">
         <div id="title">GAEUnit: Google App Engine Unit Test Framework</div>
-        <div id="version">version 1.2.2</div>
-        <div id="weblink">Please check <a href="http://code.google.com/p/gaeunit">http://code.google.com/p/gaeunit</a> for the latest version</div>
+        <div id="version">Version 1.2.4</div>
     </div>
     <div id="resultarea">
         <table id="results"><tbody>
@@ -412,8 +411,15 @@ testResultPageContent = """
     </div>
     <div id="errorarea">The test is running, please wait...</div>
     <div id="footerarea">
-        Please write to the <a href="mailto:George.Z.Lei@Gmail.com">author</a> to report problems<br/>
-        Copyright 2008 George Lei and Steven R. Farley
+        <div id="weblink">
+        <p>
+          Please visit the <a href="http://code.google.com/p/gaeunit">project home page</a>
+          for the latest version or to report problems.
+        </p>
+        <p>
+          Copyright 2008 <a href="mailto:George.Z.Lei@Gmail.com">George Lei</a> and <a href="mailto:srfarley@gmail.com>Steven R. Farley</a>
+        </p>
+        </div>
     </div>
 </body>
 </html>
