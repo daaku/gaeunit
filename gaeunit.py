@@ -12,14 +12,12 @@ Usage:
 
 2. Write your own test cases by extending unittest.TestCase.
 
-3. Launch the development web server.  Point your browser to:
+3. Launch the development web server.  To run all tests, point your browser to:
 
-     http://localhost:8080/test?name=my_test_module
-
-   Replace 'my_test_module' with the module that contains your test cases,
-   and modify the port if necessary.
+   http://localhost:8080/test     (Modify the port if necessary.)
    
-   For plain text output add '&format=plain' to the URL.
+   For plain text output add '?format=plain' to the above URL.
+   See README.TXT for information on how to run specific tests.
 
 4. The results are displayed as the tests are run.
 
@@ -82,7 +80,8 @@ _DEFAULT_TEST_DIR = 'test'
 
 class MainTestPageHandler(webapp.RequestHandler):
     def get(self):
-        unknown_args = [arg for arg in self.request.arguments() if arg not in ("format", "package", "name")]
+        unknown_args = [arg for arg in self.request.arguments()
+                        if arg not in ("format", "package", "name")]
         if len(unknown_args) > 0:
             errors = []
             for arg in unknown_args:
