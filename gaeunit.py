@@ -330,7 +330,6 @@ _MAIN_PAGE_CONTENT = """
     <script language="javascript" type="text/javascript">
         var testsToRun = eval("(" + "%s" + ")"); // JSON-formatted (see _test_suite_to_json)
         var totalRuns = 0;
-        var totalTotal = 0;
         var totalErrors = 0;
         var totalFailures = 0;
 
@@ -356,11 +355,9 @@ _MAIN_PAGE_CONTENT = """
                 if (xmlHttp.status == 200) {
                     var result = eval("(" + xmlHttp.responseText + ")");
                     totalRuns += parseInt(result.runs);
-                    totalTotal += parseInt(result.total);
                     totalErrors += parseInt(result.errors);
                     totalFailures += parseInt(result.failures);
                     document.getElementById("testran").innerHTML = totalRuns;
-                    document.getElementById("testtotal").innerHTML = totalTotal;
                     document.getElementById("testerror").innerHTML = totalErrors;
                     document.getElementById("testfailure").innerHTML = totalFailures;
                     if (totalErrors == 0 && totalFailures == 0) {
@@ -404,6 +401,7 @@ _MAIN_PAGE_CONTENT = """
         
         function runTests() {
             // Run each test asynchronously (concurrently).
+            var totalTests = 0;
             for (var moduleName in testsToRun) {
                 var classes = testsToRun[moduleName];
                 for (var className in classes) {
@@ -414,19 +412,19 @@ _MAIN_PAGE_CONTENT = """
                     //requestTestRun(moduleName, className);
                     methods = classes[className];
                     for (var i = 0; i < methods.length; i++) {
+                        totalTests += 1;
                         var methodName = methods[i];
                         requestTestRun(moduleName, className, methodName);
                     }
                 }
             }
+            document.getElementById("testtotal").innerHTML = totalTests;
         }
-        
-        runTests()
 
     </script>
     <title>GAEUnit: Google App Engine Unit Test Framework</title>
 </head>
-<body>
+<body onload="runTests()">
     <div id="headerarea">
         <div id="title">GAEUnit: Google App Engine Unit Test Framework</div>
         <div id="version">Version 1.2.4</div>
