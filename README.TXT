@@ -1,5 +1,7 @@
 GAEUnit: Google App Engine Unit Test Framework
 
+Version 1.2.5
+
 http://code.google.com/p/gaeunit
 
 Copyright (c) 2008 George Lei and Steven R. Farley.  All rights reserved.
@@ -16,6 +18,8 @@ WHAT'S NEW
 
 1.2.5
   * Tests are run concurrently; results are updated as each test completes.
+  * Source code refactoring.
+  * Bug fixes.
 
 
 INSTALLATION
