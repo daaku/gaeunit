@@ -1,6 +1,6 @@
 GAEUnit: Google App Engine Unit Test Framework
 
-Version 1.2.5
+Version 1.2.6
 
 http://code.google.com/p/gaeunit
 
@@ -16,9 +16,8 @@ GAEUnit is simple. It contains only one file, gaeunit.py. Just copy that file in
 
 WHAT'S NEW
 
-1.2.5
-  * Tests are run concurrently; results are updated as each test completes.
-  * Source code refactoring.
+1.2.6
+  * Can set alternate test directory with _LOCAL_TEST_DIR variable.
   * Bug fixes.
 
 
