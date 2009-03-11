@@ -1,5 +1,4 @@
 import unittest
-import logging
 
 class BarTest(unittest.TestCase):
     

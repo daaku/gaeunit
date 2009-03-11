@@ -29,6 +29,7 @@ INSTALLATION
   2. Modify 'app.yaml' by adding the following mapping below the 'handlers:' section:
 
      - url: /test.*
+       login: admin  # This is important if you deploy the test directory in production!
        script: gaeunit.py
 
 

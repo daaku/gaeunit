@@ -6,6 +6,7 @@ api_version: 1
 handlers:
 
 - url: /test.*
+  login: admin
   script: gaeunit.py
 
 - url: /
