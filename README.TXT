@@ -1,10 +1,10 @@
 GAEUnit: Google App Engine Unit Test Framework
 
-Version 1.2.6
+Version 1.2.7
 
 http://code.google.com/p/gaeunit
 
-Copyright (c) 2008 George Lei and Steven R. Farley.  All rights reserved.
+Copyright (c) 2008-2009 George Lei and Steven R. Farley.  All rights reserved.
 
 
 SUMMARY
@@ -16,6 +16,8 @@ GAEUnit is simple. It contains only one file, gaeunit.py. Just copy that file in
 
 WHAT'S NEW
 
+1.2.7
+  * Be compatible with GAE SDK 1.2.1
 1.2.6
   * Can set alternate test directory with _LOCAL_TEST_DIR variable.
   * Bug fixes.
