@@ -1,0 +1,41 @@
+<?xml version="1.0"?>  
+<project name="GAEUnit" default="dist" basedir=".">
+  <!-- set global properties for this build -->
+  <property name="buildbase" location="build"/>
+  <property name="build" location="${buildbase}/gaeunit-1.2.7"/>
+  <property name="dist"  location="gaeunit-1.2.7.zip"/>
+
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${buildbase}"/>
+    <mkdir dir="${build}"/>
+  </target>
+
+  <target name="copy" depends="init"
+        description="copy to-be-released files " >
+    <copy todir="${build}" includeEmptyDirs="false">
+      <fileset dir=".">
+        <exclude name="**/.svn"/>
+        <exclude name="${build}"/>
+        <exclude name="${buildbase}"/>
+        <exclude name="build.xml"/>
+      </fileset>
+    </copy>
+  </target>
+
+  <target name="dist" depends="copy"
+        description="generate the distribution" >
+    <zip destfile="${dist}" basedir="${buildbase}"/>
+  </target>
+
+  <target name="clean"
+        description="clean up" >
+    <!-- Delete the ${build} and ${dist} directory trees -->
+    <delete dir="${build}"/>
+    <delete dir="${dist}"/>
+    <delete dir="${buildbase}"/>
+  </target>
+</project>
+
