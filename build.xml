@@ -1,9 +1,10 @@
 <?xml version="1.0"?>  
 <project name="GAEUnit" default="dist" basedir=".">
   <!-- set global properties for this build -->
+  <property name="version" value="gaeunit-1.2.8"/>
   <property name="buildbase" location="build"/>
-  <property name="build" location="${buildbase}/gaeunit-1.2.7"/>
-  <property name="dist"  location="gaeunit-1.2.7.zip"/>
+  <property name="build" location="build/${version}"/>
+  <property name="dist"  location="${version}.zip"/>
 
   <target name="init">
     <!-- Create the time stamp -->

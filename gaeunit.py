@@ -53,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 __author__ = "George Lei and Steven R. Farley"
 __email__ = "George.Z.Lei@Gmail.com"
-__version__ = "#Revision: 1.2.7 $"[11:-2]
+__version__ = "#Revision: 1.2.8 $"[11:-2]
 __copyright__= "Copyright (c) 2008-2009, George Lei and Steven R. Farley"
 __license__ = "BSD"
 __url__ = "http://code.google.com/p/gaeunit"
@@ -236,7 +236,7 @@ def _create_suite(request):
 def _load_default_test_modules():
     if not _LOCAL_TEST_DIR in sys.path:
         sys.path.append(_LOCAL_TEST_DIR)
-        module_names = [mf[0:-3] for mf in os.listdir(_LOCAL_TEST_DIR) if mf.endswith(".py")]
+    module_names = [mf[0:-3] for mf in os.listdir(_LOCAL_TEST_DIR) if mf.endswith(".py")]
     return [reload(__import__(name)) for name in module_names]
 
 

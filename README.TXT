@@ -1,6 +1,6 @@
 GAEUnit: Google App Engine Unit Test Framework
 
-Version 1.2.7
+Version 1.2.8
 
 http://code.google.com/p/gaeunit
 
@@ -16,6 +16,8 @@ GAEUnit is simple. It contains only one file, gaeunit.py. Just copy that file in
 
 WHAT'S NEW
 
+1.2.8
+  * Fix the issue of local variable reference problem in App Engine production environment (issue #18).
 1.2.7
   * Be compatible with GAE SDK 1.2.1
 1.2.6
