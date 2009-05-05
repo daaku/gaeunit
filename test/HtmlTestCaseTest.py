@@ -1,0 +1,49 @@
+'''
+Created on May 5, 2009
+
+@author: george
+'''
+import unittest
+import gaeunit
+
+class Test(unittest.TestCase):
+    tc = gaeunit.GAETestCase("run")
+    
+    def test_html_compare_ignorable_blank(self):
+        html1 = """ <div>  test text
+                </div> """
+        html2 = """<div>test text</div>"""
+        self.tc.assertHtmlEqual(html1, html2)
+
+    def test_html_compare_unignorable_blank(self):
+        html1 = """<div>test text</div>"""
+        html2 = """<div>testtext</div>"""
+        self.assertRaises(AssertionError, self.tc.assertHtmlEqual, html1, html2)
+
+    def test_kill_extra_blank(self):
+        html1 = """ < div  class="aaa">  test  test\t </div > """
+        html2 = """<div class="aaa">test test</div>"""
+        self.assertEqual(self.tc._formalize(html1), html2)
+        
+    def test_replace_return_sign(self):
+        html1 = """test
+test\r\n"""
+        html2 = """test test """
+        self.assertEqual(self.tc._formalize(html1), html2)
+
+
+class SystemTest(gaeunit.GAETestCase):
+    def test_html_compare_ignorable_blank(self):
+        html1 = """ <div>  test text
+                </div> """
+        html2 = """<div>test text</div>"""
+        self.assertHtmlEqual(html1, html2)
+
+    def test_html_compare_unignorable_blank(self):
+        html1 = """<div>test text</div>"""
+        html2 = """<div>testtext</div>"""
+        self.assertRaises(AssertionError, self.assertHtmlEqual, html1, html2)
+
+if __name__ == "__main__":
+    #import sys;sys.argv = ['', 'Test.testName']
+    unittest.main()

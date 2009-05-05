@@ -64,6 +64,7 @@ import unittest
 import time
 import logging
 import cgi
+import re
 import django.utils.simplejson
 
 from google.appengine.ext import webapp
@@ -81,6 +82,26 @@ _WEB_TEST_DIR = '/test'   # how you want to refer to tests on your web server
 #     script: gaeunit.py
 
 
+class GAETestCase(unittest.TestCase):
+    """TestCase parent class that provides the following assert functions
+        * assertHtmlEqual - compare two HTML string ignoring the out-of-element blanks and other differences acknowledged in standard.
+    """
+    
+    def assertHtmlEqual(self, html1, html2):
+        html1 = self._formalize(html1)
+        html2 = self._formalize(html2)
+        self.assertEqual(html1, html2)
+
+    def _formalize(self, html):
+        html = html.replace("\r\n", " ").replace("\n", " ")
+        html = re.sub(r"[ \t]+", " ", html)
+        html = re.sub(r"[ ]*>[ ]*", ">", html)
+        html = re.sub(r"[ ]*<[ ]*", "<", html)
+        return html
+    
+    assertHtmlEquals = assertHtmlEqual
+        
+      
 ##############################################################################
 # Main request handler
 ##############################################################################
