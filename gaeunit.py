@@ -176,7 +176,7 @@ class JsonTestResult(unittest.TestResult):
         for test, err in list:
             d = { 
               'desc': test.shortDescription() or str(test), 
-              'detail': err,
+              'detail': cgi.escape(err),
             }
             dict.append(d)
         return dict
