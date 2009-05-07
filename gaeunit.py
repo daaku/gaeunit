@@ -67,6 +67,7 @@ import cgi
 import re
 import django.utils.simplejson
 
+from xml.sax.saxutils import unescape
 from google.appengine.ext import webapp
 from google.appengine.api import apiproxy_stub_map  
 from google.appengine.api import datastore_file_stub
@@ -88,16 +89,67 @@ class GAETestCase(unittest.TestCase):
     """
     
     def assertHtmlEqual(self, html1, html2):
+        if html1 is None or html2 is None:
+            raise self.failureException, "argument is None"
         html1 = self._formalize(html1)
         html2 = self._formalize(html2)
-        self.assertEqual(html1, html2)
+        if not html1 == html2:
+#            if len(html1) != len(html2):
+#                raise self.failureException, \
+#                      'HTML lengths are not equal'
+            error_msg = self._findHtmlDifference(html1, html2)
+            error_msg = "HTML contents are not equal" + error_msg
+            raise self.failureException, error_msg
 
     def _formalize(self, html):
         html = html.replace("\r\n", " ").replace("\n", " ")
         html = re.sub(r"[ \t]+", " ", html)
         html = re.sub(r"[ ]*>[ ]*", ">", html)
         html = re.sub(r"[ ]*<[ ]*", "<", html)
-        return html
+        return unescape(html)
+    
+    def _findHtmlDifference(self, html1, html2):
+        display_window_width = 41
+        html1_len = len(html1)
+        html2_len = len(html2)
+        for i in range(html1_len):
+            if i >= html2_len or html1[i] != html2[i]:
+                break
+            
+        if html1_len < html2_len:
+            html1 += " " * (html2_len - html1_len)
+            length = html2_len
+        elif html1_len > html2_len:
+            html2 += " " * (html1_len - html2_len)
+            length = html1_len
+        else:
+            length = html1_len
+            
+        if length <= display_window_width:
+            return "\n%s\n%s\n%s^" % (html1, html2, "_" * i)
+        
+        start = i - display_window_width / 2
+        end = i + 1 + display_window_width / 2
+        
+        if start < 0:
+            adjust = -start
+            start += adjust
+            end += adjust
+            pointer_pos = i
+            leading_dots = ""
+            ending_dots = "..."
+        elif end > length:
+            adjust = end - length
+            start -= adjust
+            end -= adjust
+            pointer_pos = i - start + 3
+            leading_dots = "..."
+            ending_dots = ""
+        else:
+            pointer_pos = i - start + 3
+            leading_dots = "..."
+            ending_dots = "..."
+        return '\n%s%s%s\n%s\n%s^' % (leading_dots, html1[start:end], ending_dots, leading_dots+html2[start:end]+ending_dots, "_" * (i - start + len(leading_dots)))
     
     assertHtmlEquals = assertHtmlEqual
         

@@ -30,6 +30,39 @@ class Test(unittest.TestCase):
 test\r\n"""
         html2 = """test test """
         self.assertEqual(self.tc._formalize(html1), html2)
+        
+    def test_unescape(self):
+        html1 = "&lt; &amp; &gt;"
+        html2 = "< & >"
+        self.assertEqual(self.tc._formalize(html1), html2)
+        
+    def test_findHtmlDifference(self):
+        html1 = "abcdef"
+        html2 = "abccef"
+        result_expected = "\nabcdef\nabccef\n___^"
+        result = self.tc._findHtmlDifference(html1, html2)
+        self.assertEqual(result, result_expected)
+
+    def test_findHtmlDifference_long(self):
+        html1 = "aaaaabbbbbcccccdddddeeeeefffffggggghhhhhiiiiijjjjjkkkkk"
+        html2 = "aaaaabbbbbcccccdddddeeeeeeffffggggghhhhhiiiiijjjjjkkkkk"
+        result_expected = "\n...bbbbbcccccdddddeeeeefffffggggghhhhhiiiiij...\n...bbbbbcccccdddddeeeeeeffffggggghhhhhiiiiij...\n_______________________^"
+        result = self.tc._findHtmlDifference(html1, html2)
+        self.assertEqual(result, result_expected)
+
+    def test_findHtmlDifference_long_leftmost(self):
+        html1 = "aaaaabbbbbcccccdddddeeeeefffffggggghhhhhiiiiijjjjjkkkkk"
+        html2 = "aaaabbbbbbcccccdddddeeeeefffffggggghhhhhiiiiijjjjjkkkkk"
+        result_expected = "\naaaaabbbbbcccccdddddeeeeefffffggggghhhhhi...\naaaabbbbbbcccccdddddeeeeefffffggggghhhhhi...\n____^"
+        result = self.tc._findHtmlDifference(html1, html2)
+        self.assertEqual(result, result_expected)
+
+    def test_findHtmlDifference_long_rightmost(self):
+        html1 = "aaaaabbbbbcccccdddddeeeeefffffggggghhhhhiiiiijjjjjkkkkk"
+        html2 = "aaaaabbbbbcccccdddddeeeeefffffggggghhhhhiiiiijjjjkkkkkk"
+        result_expected = "\n...cdddddeeeeefffffggggghhhhhiiiiijjjjjkkkkk\n...cdddddeeeeefffffggggghhhhhiiiiijjjjkkkkkk\n______________________________________^"
+        result = self.tc._findHtmlDifference(html1, html2)
+        self.assertEqual(result, result_expected)
 
 
 class SystemTest(gaeunit.GAETestCase):
