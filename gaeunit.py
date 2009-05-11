@@ -82,6 +82,94 @@ _WEB_TEST_DIR = '/test'   # how you want to refer to tests on your web server
 #   - url: /u/test.*
 #     script: gaeunit.py
 
+##################################################
+## Django support
+
+def django_test_runner(request):
+    unknown_args = [arg for (arg, v) in request.REQUEST.items()
+                    if arg not in ("format", "package", "name")]
+    if len(unknown_args) > 0:
+        errors = []
+        for arg in unknown_args:
+            errors.append(_log_error("The request parameter '%s' is not valid." % arg))
+        from django.http import HttpResponseNotFound
+        return HttpResponseNotFound(" ".join(errors))
+
+    format = request.REQUEST.get("format", "html")
+    if format == "html":
+        return _render_html(request.REQUEST)
+    elif format == "plain":
+        return _render_plain(request.REQUEST)
+    else:
+        error = _log_error("The format '%s' is not valid." % cgi.escape(format))
+        from django.http import HttpResponseServerError
+        return HttpResponseServerError(error)
+
+def _render_html(request_params):
+    suite, error = _create_suite_django(request_params)
+    if not error:
+        content = _MAIN_PAGE_CONTENT % (_test_suite_to_json(suite), _WEB_TEST_DIR, __version__)
+        from django.http import HttpResponse
+        return HttpResponse(content)
+    else:
+        from django.http import HttpResponseServerError
+        return HttpResponseServerError(error)
+
+def _create_suite_django(request_params):
+    package_name = request_params.get("package")
+    test_name = request_params.get("name")
+
+    loader = unittest.defaultTestLoader
+    suite = unittest.TestSuite()
+
+    error = None
+
+    try:
+        if not package_name and not test_name:
+                modules = _load_default_test_modules_django()
+                for module in modules:
+                    suite.addTest(loader.loadTestsFromModule(module))
+        elif test_name:
+                _load_default_test_modules_django()
+                suite.addTest(loader.loadTestsFromName(test_name))
+        elif package_name:
+                package = reload(__import__(package_name))
+                module_names = package.__all__
+                for module_name in module_names:
+                    suite.addTest(loader.loadTestsFromName('%s.%s' % (package_name, module_name)))
+    
+        if suite.countTestCases() == 0:
+            raise Exception("'%s' is not found or does not contain any tests." %  \
+                            (test_name or package_name or 'local directory: \"%s\"' % _LOCAL_TEST_DIR))
+    except Exception, e:
+        print e
+        error = str(e)
+        _log_error(error)
+
+    return (suite, error)
+
+
+def _load_default_test_modules_django():
+    _LOCAL_TEST_DIR = '../../gaeunit/test'
+    if not _LOCAL_TEST_DIR in sys.path:
+        sys.path.append(_LOCAL_TEST_DIR)
+    module_names = [mf[0:-3] for mf in os.listdir(_LOCAL_TEST_DIR) if mf.endswith(".py")]
+    return [reload(__import__(name)) for name in module_names]
+
+
+def django_json_test_runner(request):
+    from django.http import HttpResponse
+    response = HttpResponse()
+    response["Content-Type"] = "text/javascript"
+    test_name = request.REQUEST.get("name")
+    _load_default_test_modules_django()
+    suite = unittest.defaultTestLoader.loadTestsFromName(test_name)
+    runner = JsonTestRunner()
+    _run_test_suite(runner, suite)
+    runner.result.render_to(response)
+    return response
+
+########################################################
 
 class GAETestCase(unittest.TestCase):
     """TestCase parent class that provides the following assert functions
@@ -94,9 +182,6 @@ class GAETestCase(unittest.TestCase):
         html1 = self._formalize(html1)
         html2 = self._formalize(html2)
         if not html1 == html2:
-#            if len(html1) != len(html2):
-#                raise self.failureException, \
-#                      'HTML lengths are not equal'
             error_msg = self._findHtmlDifference(html1, html2)
             error_msg = "HTML contents are not equal" + error_msg
             raise self.failureException, error_msg
@@ -119,10 +204,8 @@ class GAETestCase(unittest.TestCase):
         if html1_len < html2_len:
             html1 += " " * (html2_len - html1_len)
             length = html2_len
-        elif html1_len > html2_len:
-            html2 += " " * (html1_len - html2_len)
-            length = html1_len
         else:
+            html2 += " " * (html1_len - html2_len)
             length = html1_len
             
         if length <= display_window_width:
@@ -273,9 +356,9 @@ class JsonTestListHandler(webapp.RequestHandler):
 ##############################################################################
 
 
-def _create_suite(request):
-    package_name = request.get("package")
-    test_name = request.get("name")
+def _create_suite(request_params):
+    package_name = request_params.get("package")
+    test_name = request_params.get("name")
 
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
@@ -300,6 +383,7 @@ def _create_suite(request):
             raise Exception("'%s' is not found or does not contain any tests." %  \
                             (test_name or package_name or 'local directory: \"%s\"' % _LOCAL_TEST_DIR))
     except Exception, e:
+        print e
         error = str(e)
         _log_error(error)
 
