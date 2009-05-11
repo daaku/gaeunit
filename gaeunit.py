@@ -75,6 +75,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 
 _LOCAL_TEST_DIR = 'test'  # location of files
 _WEB_TEST_DIR = '/test'   # how you want to refer to tests on your web server
+_LOCAL_DJANGO_TEST_DIR = '../../gaeunit/test'
 
 # or:
 # _WEB_TEST_DIR = '/u/test'
@@ -96,17 +97,19 @@ def django_test_runner(request):
         return HttpResponseNotFound(" ".join(errors))
 
     format = request.REQUEST.get("format", "html")
+    package_name = request.REQUEST.get("package")
+    test_name = request.REQUEST.get("name")
     if format == "html":
-        return _render_html(request.REQUEST)
+        return _render_html(package_name, test_name)
     elif format == "plain":
-        return _render_plain(request.REQUEST)
+        return _render_plain(package_name, test_name)
     else:
         error = _log_error("The format '%s' is not valid." % cgi.escape(format))
         from django.http import HttpResponseServerError
         return HttpResponseServerError(error)
 
-def _render_html(request_params):
-    suite, error = _create_suite_django(request_params)
+def _render_html(package_name, test_name):
+    suite, error = _create_suite(package_name, test_name, _LOCAL_DJANGO_TEST_DIR)
     if not error:
         content = _MAIN_PAGE_CONTENT % (_test_suite_to_json(suite), _WEB_TEST_DIR, __version__)
         from django.http import HttpResponse
@@ -115,54 +118,13 @@ def _render_html(request_params):
         from django.http import HttpResponseServerError
         return HttpResponseServerError(error)
 
-def _create_suite_django(request_params):
-    package_name = request_params.get("package")
-    test_name = request_params.get("name")
-
-    loader = unittest.defaultTestLoader
-    suite = unittest.TestSuite()
-
-    error = None
-
-    try:
-        if not package_name and not test_name:
-                modules = _load_default_test_modules_django()
-                for module in modules:
-                    suite.addTest(loader.loadTestsFromModule(module))
-        elif test_name:
-                _load_default_test_modules_django()
-                suite.addTest(loader.loadTestsFromName(test_name))
-        elif package_name:
-                package = reload(__import__(package_name))
-                module_names = package.__all__
-                for module_name in module_names:
-                    suite.addTest(loader.loadTestsFromName('%s.%s' % (package_name, module_name)))
-    
-        if suite.countTestCases() == 0:
-            raise Exception("'%s' is not found or does not contain any tests." %  \
-                            (test_name or package_name or 'local directory: \"%s\"' % _LOCAL_TEST_DIR))
-    except Exception, e:
-        print e
-        error = str(e)
-        _log_error(error)
-
-    return (suite, error)
-
-
-def _load_default_test_modules_django():
-    _LOCAL_TEST_DIR = '../../gaeunit/test'
-    if not _LOCAL_TEST_DIR in sys.path:
-        sys.path.append(_LOCAL_TEST_DIR)
-    module_names = [mf[0:-3] for mf in os.listdir(_LOCAL_TEST_DIR) if mf.endswith(".py")]
-    return [reload(__import__(name)) for name in module_names]
-
-
 def django_json_test_runner(request):
+    test_dir = '../../gaeunit/test'
     from django.http import HttpResponse
     response = HttpResponse()
     response["Content-Type"] = "text/javascript"
     test_name = request.REQUEST.get("name")
-    _load_default_test_modules_django()
+    _load_default_test_modules(test_dir)
     suite = unittest.defaultTestLoader.loadTestsFromName(test_name)
     runner = JsonTestRunner()
     _run_test_suite(runner, suite)
@@ -173,7 +135,8 @@ def django_json_test_runner(request):
 
 class GAETestCase(unittest.TestCase):
     """TestCase parent class that provides the following assert functions
-        * assertHtmlEqual - compare two HTML string ignoring the out-of-element blanks and other differences acknowledged in standard.
+        * assertHtmlEqual - compare two HTML string ignoring the 
+            out-of-element blanks and other differences acknowledged in standard.
     """
     
     def assertHtmlEqual(self, html1, html2):
@@ -255,27 +218,29 @@ class MainTestPageHandler(webapp.RequestHandler):
             return
 
         format = self.request.get("format", "html")
+        package_name = self.request.get("package")
+        test_name = self.request.get("name")
         if format == "html":
-            self._render_html()
+            self._render_html(package_name, test_name)
         elif format == "plain":
-            self._render_plain()
+            self._render_plain(package_name, test_name)
         else:
             error = _log_error("The format '%s' is not valid." % cgi.escape(format))
             self.error(404)
             self.response.out.write(error)
             
-    def _render_html(self):
-        suite, error = _create_suite(self.request)
+    def _render_html(self, package_name, test_name):
+        suite, error = _create_suite(package_name, test_name, _LOCAL_TEST_DIR)
         if not error:
             self.response.out.write(_MAIN_PAGE_CONTENT % (_test_suite_to_json(suite), _WEB_TEST_DIR, __version__))
         else:
             self.error(404)
             self.response.out.write(error)
         
-    def _render_plain(self):
+    def _render_plain(self, package_name, test_name):
         self.response.headers["Content-Type"] = "text/plain"
         runner = unittest.TextTestRunner(self.response.out)
-        suite, error = _create_suite(self.request)
+        suite, error = _create_suite(package_name, test_name, _LOCAL_TEST_DIR)
         if not error:
             self.response.out.write("====================\n" \
                                     "GAEUnit Test Results\n" \
@@ -332,7 +297,7 @@ class JsonTestRunHandler(webapp.RequestHandler):
     def get(self):    
         self.response.headers["Content-Type"] = "text/javascript"
         test_name = self.request.get("name")
-        _load_default_test_modules()
+        _load_default_test_modules(_LOCAL_TEST_DIR)
         suite = unittest.defaultTestLoader.loadTestsFromName(test_name)
         runner = JsonTestRunner()
         _run_test_suite(runner, suite)
@@ -343,7 +308,7 @@ class JsonTestRunHandler(webapp.RequestHandler):
 class JsonTestListHandler(webapp.RequestHandler):
     def get(self):
         self.response.headers["Content-Type"] = "text/javascript"
-        suite, error = _create_suite(self.request)
+        suite, error = _create_suite(self.request) #TODO
         if not error:
             self.response.out.write(_test_suite_to_json(suite))
         else:
@@ -356,10 +321,7 @@ class JsonTestListHandler(webapp.RequestHandler):
 ##############################################################################
 
 
-def _create_suite(request_params):
-    package_name = request_params.get("package")
-    test_name = request_params.get("name")
-
+def _create_suite(package_name, test_name, test_dir):
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
 
@@ -367,11 +329,11 @@ def _create_suite(request_params):
 
     try:
         if not package_name and not test_name:
-                modules = _load_default_test_modules()
+                modules = _load_default_test_modules(test_dir)
                 for module in modules:
                     suite.addTest(loader.loadTestsFromModule(module))
         elif test_name:
-                _load_default_test_modules()
+                _load_default_test_modules(test_dir)
                 suite.addTest(loader.loadTestsFromName(test_name))
         elif package_name:
                 package = reload(__import__(package_name))
@@ -390,10 +352,10 @@ def _create_suite(request_params):
     return (suite, error)
 
 
-def _load_default_test_modules():
-    if not _LOCAL_TEST_DIR in sys.path:
-        sys.path.append(_LOCAL_TEST_DIR)
-    module_names = [mf[0:-3] for mf in os.listdir(_LOCAL_TEST_DIR) if mf.endswith(".py")]
+def _load_default_test_modules(test_dir):
+    if not test_dir in sys.path:
+        sys.path.append(test_dir)
+    module_names = [mf[0:-3] for mf in os.listdir(test_dir) if mf.endswith(".py")]
     return [reload(__import__(name)) for name in module_names]
 
 
