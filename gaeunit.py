@@ -118,13 +118,28 @@ def _render_html(package_name, test_name):
         from django.http import HttpResponseServerError
         return HttpResponseServerError(error)
 
+def _render_plain(package_name, test_name):
+    suite, error = _create_suite(package_name, test_name, _LOCAL_DJANGO_TEST_DIR)
+    if not error:
+        from django.http import HttpResponse
+        response = HttpResponse()
+        response["Content-Type"] = "text/plain"
+        runner = unittest.TextTestRunner(response)
+        response.write("====================\n" \
+                        "GAEUnit Test Results\n" \
+                        "====================\n\n")
+        _run_test_suite(runner, suite)
+        return response
+    else:
+        from django.http import HttpResponseServerError
+        return HttpResponseServerError(error)
+
 def django_json_test_runner(request):
-    test_dir = '../../gaeunit/test'
     from django.http import HttpResponse
     response = HttpResponse()
     response["Content-Type"] = "text/javascript"
     test_name = request.REQUEST.get("name")
-    _load_default_test_modules(test_dir)
+    _load_default_test_modules(_LOCAL_DJANGO_TEST_DIR)
     suite = unittest.defaultTestLoader.loadTestsFromName(test_name)
     runner = JsonTestRunner()
     _run_test_suite(runner, suite)
