@@ -578,7 +578,7 @@ _MAIN_PAGE_CONTENT = """
         </p>
         <p>
             Copyright 2008-2009 <a href="mailto:George.Z.Lei@Gmail.com">George Lei</a>
-            and <a href="mailto:srfarley@gmail.com>Steven R. Farley</a>
+            and <a href="mailto:srfarley@gmail.com">Steven R. Farley</a>
         </p>
         </div>
     </div>
