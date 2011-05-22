@@ -60,6 +60,8 @@ __url__ = "http://code.google.com/p/gaeunit"
 
 import sys
 import os
+sys.path[1:1] = [os.path.abspath(os.path.dirname(__file__) + '/lib')]
+
 import unittest
 import time
 import logging
@@ -73,7 +75,7 @@ from google.appengine.api import apiproxy_stub_map
 from google.appengine.api import datastore_file_stub
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-_LOCAL_TEST_DIR = 'test'  # location of files
+_LOCAL_TEST_DIR = 'tests'  # location of files
 _WEB_TEST_DIR = '/test'   # how you want to refer to tests on your web server
 _LOCAL_DJANGO_TEST_DIR = '../../gaeunit/test'
 
@@ -424,7 +426,7 @@ def _run_test_suite(runner, suite):
        temp_stub = datastore_file_stub.DatastoreFileStub('GAEUnitDataStore', None, None, trusted=True)  
        apiproxy_stub_map.apiproxy.RegisterStub('datastore', temp_stub)
        # Allow the other services to be used as-is for tests.
-       for name in ['user', 'urlfetch', 'mail', 'memcache', 'images', 'blobstore']: 
+       for name in ['user', 'urlfetch', 'mail', 'memcache', 'images', 'file', 'blobstore']:
            apiproxy_stub_map.apiproxy.RegisterStub(name, original_apiproxy.GetStub(name))
        runner.run(suite)
     finally:
